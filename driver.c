@@ -9,6 +9,11 @@
 #include <OpenCL/opencl.h>
 #endif
 
+void handleCLEnqueueBufferReturn(cl_int err);
+void handleCLCreateBufferReturn(cl_int err);
+void handleCLSetKernelArg(cl_int err, int index);
+
+
 ////////////////////////////////////////////////////////////////////////////////
 CLObject* init_driver() {
     CLObject* ocl = (CLObject*)malloc(sizeof(CLObject));
@@ -132,7 +137,6 @@ CLObject* init_driver() {
 
 //===============================================================================================================================================================  
 // START of assignment code section 
-    printf("Test Working\n");
 
 // END of assignment code section 
 //===============================================================================================================================================================  
@@ -163,8 +167,8 @@ int shutdown_driver(CLObject* ocl) {
      }
 //===============================================================================================================================================================  
 // START of assignment code section      
-    printf("In shutdown driver\n");
-// END of assignment code section 
+
+// END of assignment code section
 //===============================================================================================================================================================  
      
     free(ocl);
@@ -180,10 +184,10 @@ int run_driver(CLObject* ocl,unsigned int buffer_size,  int* input_buffer_1, int
 #endif
      int err;                            // error code returned from api calls
      int status[1]={-1};               // number of correct results returned
-//     unsigned int max_iters;
-//     max_iters = MAX_ITERS;
+     unsigned int max_iters;
+     max_iters = MAX_ITERS;
 
-//     size_t global;                      // global domain size for our calculation
+     size_t global;                      // global domain size for our calculation
      size_t local;                       // local domain size for our calculation
 
      cl_mem input1, input2;                       // device memory used for the input array
@@ -196,7 +200,7 @@ int run_driver(CLObject* ocl,unsigned int buffer_size,  int* input_buffer_1, int
          exit(EXIT_FAILURE);
      }
 
-//     global = buffer_size; // create as meany threads on the device as there are elements in the array
+     global = buffer_size; // create as meany threads on the device as there are elements in the array
 
 //===============================================================================================================================================================  
 // START of assignment code section 
@@ -206,13 +210,65 @@ int run_driver(CLObject* ocl,unsigned int buffer_size,  int* input_buffer_1, int
 
     // Create the buffer objects to link the input and output arrays in device memory to the buffers in host memory
 
-    printf("Start driver code\n");
-  
-    // Write the data in input arrays into the device memory 
- 
+    cl_int errcode_ret = 0;
+    input1 = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_size, input_buffer_1, &errcode_ret);
+    handleCLCreateBufferReturn(errcode_ret);
+
+    input2 = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_size, input_buffer_2, &errcode_ret);
+    handleCLCreateBufferReturn(errcode_ret);
+
+    output = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_size, output_buffer, &errcode_ret);
+    handleCLCreateBufferReturn(errcode_ret);
+
+
+    int* status_buf_loc = malloc(sizeof(int) * buffer_size);
+    status_buf = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_size, status_buf_loc, &errcode_ret);
+    handleCLCreateBufferReturn(errcode_ret);
+
+    printf("Successfully created buffer objects.\n");
+
+
+    // Write the data in input arrays into the device memory
+    cl_int result;
+    result = clEnqueueWriteBuffer(ocl->command_queue, input1, CL_TRUE, 0, buffer_size, &input1, 0, NULL, NULL);
+    handleCLEnqueueBufferReturn(result);
+
+    result = clEnqueueWriteBuffer(ocl->command_queue, input2, CL_TRUE, 0, buffer_size, &input2, 0, NULL, NULL);
+    handleCLEnqueueBufferReturn(result);
+
+    result = clEnqueueWriteBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_size, &output, 0, NULL, NULL);
+    handleCLEnqueueBufferReturn(result);
+
+    result = clEnqueueWriteBuffer(ocl->command_queue, status_buf, CL_TRUE, 0, buffer_size, &status_buf_loc, 0, NULL, NULL);
+    handleCLEnqueueBufferReturn(result);
+
+    printf("Successfully enqueued buffer objects.\n");
+
 
     // Set the arguments to our compute kernel
-    
+    result = clSetKernelArg(ocl->kernel, 0, buffer_size, &input1);
+    handleCLSetKernelArg(result, 0);
+
+    result = clSetKernelArg(ocl->kernel, 1, buffer_size, &input2);
+    handleCLSetKernelArg(result, 1);
+
+    result = clSetKernelArg(ocl->kernel, 2, buffer_size, &output);
+    handleCLSetKernelArg(result, 2);
+
+    result = clSetKernelArg(ocl->kernel, 3, buffer_size, &status_buf);
+    handleCLSetKernelArg(result, 3);
+
+    result = clSetKernelArg(ocl->kernel, 4, sizeof(int), &w1);
+    handleCLSetKernelArg(result, 4);
+
+    result = clSetKernelArg(ocl->kernel, 5, sizeof(int), &w2);
+    handleCLSetKernelArg(result, 5);
+
+    result = clSetKernelArg(ocl->kernel, 6, sizeof(int), &buffer_size);
+    handleCLSetKernelArg(result, 6);
+
+
+    printf("Successfully set buffer objects in device.\n");
 
     // Execute the kernel, i.e. tell the device to process the data using the given global and local ranges
  
@@ -235,3 +291,28 @@ int run_driver(CLObject* ocl,unsigned int buffer_size,  int* input_buffer_1, int
     return *status;
 
 }
+
+
+void handleCLSetKernelArg(cl_int err, int index){
+    if (err != CL_SUCCESS) {
+        fprintf(stderr,"Error: Failed to set kernel arg %d! %d\n", index, err);
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+void handleCLCreateBufferReturn(cl_int err){
+    if (err != CL_SUCCESS) {
+        fprintf(stderr,"Error: Failed to create buffer! %d\n", err);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void handleCLEnqueueBufferReturn(cl_int err){
+    if (err != CL_SUCCESS) {
+        fprintf(stderr,"Error: Failed to enqueue write buffer! %d\n", err);
+        exit(EXIT_FAILURE);
+    }
+}
+
+
