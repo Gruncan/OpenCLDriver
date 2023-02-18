@@ -12,6 +12,7 @@
 void handleCLEnqueueBufferReturn(cl_int err);
 void handleCLCreateBufferReturn(cl_int err);
 void handleCLSetKernelArg(cl_int err, int index);
+void handleClNDRangeKernel(cl_int err);
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -271,8 +272,13 @@ int run_driver(CLObject* ocl,unsigned int buffer_size,  int* input_buffer_1, int
     printf("Successfully set buffer objects in device.\n");
 
     // Execute the kernel, i.e. tell the device to process the data using the given global and local ranges
+    unsigned long global_size = sizeof(global);
+    unsigned long local_size = sizeof(local);
 
-    
+    result = clEnqueueNDRangeKernel(ocl->command_queue, ocl->kernel, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
+    handleClNDRangeKernel(result);
+
+    printf("Successfully loads kernel.\n");
 
     // Wait for the command commands to get serviced before reading back results. This is the device sending an interrupt to the host    
     
@@ -291,6 +297,13 @@ int run_driver(CLObject* ocl,unsigned int buffer_size,  int* input_buffer_1, int
 //===============================================================================================================================================================  
     return *status;
 
+}
+
+void handleClNDRangeKernel(cl_int err){
+    if (err != CL_SUCCESS){
+        fprintf(stderr,"Error: Failed to execute kernel %d\n", err);
+        exit(EXIT_FAILURE);
+    }
 }
 
 
