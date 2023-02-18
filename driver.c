@@ -9,10 +9,12 @@
 #include <OpenCL/opencl.h>
 #endif
 
-void handleCLEnqueueBufferReturn(cl_int err);
+void handleCLEnqueueBufferWriteReturn(cl_int err);
 void handleCLCreateBufferReturn(cl_int err);
 void handleCLSetKernelArg(cl_int err, int index);
-void handleClNDRangeKernel(cl_int err);
+void handleCLNDRangeKernel(cl_int err);
+void handleCLFinish(cl_int err);
+void handleCLEnqueueBufferReadReturn(cl_int err);
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -178,7 +180,7 @@ int shutdown_driver(CLObject* ocl) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int run_driver(CLObject* ocl,unsigned int buffer_size,  int* input_buffer_1, int* input_buffer_2, int w1, int w2, int* output_buffer) {
+int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, int* input_buffer_2, int w1, int w2, int* output_buffer) {
     long long unsigned int tid = ocl->thread_num;
 #if VERBOSE_MT>2    
      printf("run_driver thread: %llu\n",tid);
@@ -186,7 +188,7 @@ int run_driver(CLObject* ocl,unsigned int buffer_size,  int* input_buffer_1, int
      int err;                            // error code returned from api calls
      int status[1]={-1};               // number of correct results returned
      unsigned int max_iters;
-     max_iters = MAX_ITERS;
+     max_iters = 100;
 
      size_t global;                      // global domain size for our calculation
      size_t local;                       // local domain size for our calculation
@@ -226,24 +228,24 @@ int run_driver(CLObject* ocl,unsigned int buffer_size,  int* input_buffer_1, int
     status_buf = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_size, status_buf_loc, &errcode_ret);
     handleCLCreateBufferReturn(errcode_ret);
 
-    printf("Successfully created buffer objects.\n");
+//    printf("Successfully created buffer objects.\n");
 
 
     // Write the data in input arrays into the device memory
     cl_int result;
     result = clEnqueueWriteBuffer(ocl->command_queue, input1, CL_TRUE, 0, buffer_size, &input1, 0, NULL, NULL);
-    handleCLEnqueueBufferReturn(result);
+    handleCLEnqueueBufferWriteReturn(result);
 
     result = clEnqueueWriteBuffer(ocl->command_queue, input2, CL_TRUE, 0, buffer_size, &input2, 0, NULL, NULL);
-    handleCLEnqueueBufferReturn(result);
+    handleCLEnqueueBufferWriteReturn(result);
 
     result = clEnqueueWriteBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_size, &output, 0, NULL, NULL);
-    handleCLEnqueueBufferReturn(result);
+    handleCLEnqueueBufferWriteReturn(result);
 
     result = clEnqueueWriteBuffer(ocl->command_queue, status_buf, CL_TRUE, 0, buffer_size, &status_buf_loc, 0, NULL, NULL);
-    handleCLEnqueueBufferReturn(result);
+    handleCLEnqueueBufferWriteReturn(result);
 
-    printf("Successfully enqueued buffer objects.\n");
+//    printf("Successfully enqueued buffer objects.\n");
 
 
     // Set the arguments to our compute kernel
@@ -269,25 +271,45 @@ int run_driver(CLObject* ocl,unsigned int buffer_size,  int* input_buffer_1, int
     handleCLSetKernelArg(result, 6);
 
 
-    printf("Successfully set buffer objects in device.\n");
+//    printf("Successfully set buffer objects in device.\n");
 
     // Execute the kernel, i.e. tell the device to process the data using the given global and local ranges
     unsigned long global_size = sizeof(global);
     unsigned long local_size = sizeof(local);
 
     result = clEnqueueNDRangeKernel(ocl->command_queue, ocl->kernel, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
-    handleClNDRangeKernel(result);
+    handleCLNDRangeKernel(result);
 
-    printf("Successfully loads kernel.\n");
+//    printf("Successfully loads kernel.\n");
 
     // Wait for the command commands to get serviced before reading back results. This is the device sending an interrupt to the host    
-    
+    result = clFinish(ocl->command_queue);
+    handleCLFinish(result);
+
+//    printf("Finished executing firmware.\n");
 
     // Check the status
-
+    result = clEnqueueReadBuffer(ocl->command_queue, status_buf, CL_TRUE, 0, sizeof(status_buf), status_buf_loc, 0, NULL, NULL);
+    handleCLEnqueueBufferReadReturn(result);
 
     // When the status is 0, read back the results from the device to verify the output
-   
+    if(*status_buf_loc != 0){
+        fprintf(stderr, "Error: Status is not 0 instead is %d\n", *status_buf_loc);
+        return -1;
+    }
+
+    result = clEnqueueReadBuffer(ocl->command_queue, output, CL_TRUE, 0, sizeof(output), output_buffer, 0, NULL, NULL);
+    handleCLEnqueueBufferReadReturn(result);
+
+    for (int i = 0; i < buffer_size; ++i) {
+        printf("output[%d]: %d\n",i, output_buffer[i]);
+    }
+
+
+
+
+
+
 
     // Shutdown and cleanup
     
@@ -299,7 +321,22 @@ int run_driver(CLObject* ocl,unsigned int buffer_size,  int* input_buffer_1, int
 
 }
 
-void handleClNDRangeKernel(cl_int err){
+void handleCLEnqueueBufferReadReturn(cl_int err){
+    if (err != CL_SUCCESS) {
+        fprintf(stderr,"Error: Failed to enqueue read buffer! %d\n", err);
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+void handleCLFinish(cl_int err){
+    if (err != CL_SUCCESS){
+        fprintf(stderr,"Error: Failed to wait for command queue to finish %d\n", err);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void handleCLNDRangeKernel(cl_int err){
     if (err != CL_SUCCESS){
         fprintf(stderr,"Error: Failed to execute kernel %d\n", err);
         exit(EXIT_FAILURE);
@@ -322,7 +359,7 @@ void handleCLCreateBufferReturn(cl_int err){
     }
 }
 
-void handleCLEnqueueBufferReturn(cl_int err){
+void handleCLEnqueueBufferWriteReturn(cl_int err){
     if (err != CL_SUCCESS) {
         fprintf(stderr,"Error: Failed to enqueue write buffer! %d\n", err);
         exit(EXIT_FAILURE);
