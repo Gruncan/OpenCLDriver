@@ -246,32 +246,33 @@ int run_driver(CLObject* ocl,unsigned int buffer_size,  int* input_buffer_1, int
 
 
     // Set the arguments to our compute kernel
-    result = clSetKernelArg(ocl->kernel, 0, buffer_size, &input1);
+    result = clSetKernelArg(ocl->kernel, 0, sizeof(input1), &input1);
     handleCLSetKernelArg(result, 0);
 
-    result = clSetKernelArg(ocl->kernel, 1, buffer_size, &input2);
+    result = clSetKernelArg(ocl->kernel, 1, sizeof(input2), &input2);
     handleCLSetKernelArg(result, 1);
 
-    result = clSetKernelArg(ocl->kernel, 2, buffer_size, &output);
+    result = clSetKernelArg(ocl->kernel, 2, sizeof(output), &output);
     handleCLSetKernelArg(result, 2);
 
-    result = clSetKernelArg(ocl->kernel, 3, buffer_size, &status_buf);
+    result = clSetKernelArg(ocl->kernel, 3, sizeof(status_buf), &status_buf);
     handleCLSetKernelArg(result, 3);
 
-    result = clSetKernelArg(ocl->kernel, 4, sizeof(int), &w1);
+    result = clSetKernelArg(ocl->kernel, 4, sizeof(w1), &w1);
     handleCLSetKernelArg(result, 4);
 
-    result = clSetKernelArg(ocl->kernel, 5, sizeof(int), &w2);
+    result = clSetKernelArg(ocl->kernel, 5, sizeof(w2), &w2);
     handleCLSetKernelArg(result, 5);
 
-    result = clSetKernelArg(ocl->kernel, 6, sizeof(int), &buffer_size);
+    result = clSetKernelArg(ocl->kernel, 6, sizeof(buffer_size), &buffer_size);
     handleCLSetKernelArg(result, 6);
 
 
     printf("Successfully set buffer objects in device.\n");
 
     // Execute the kernel, i.e. tell the device to process the data using the given global and local ranges
- 
+
+    
 
     // Wait for the command commands to get serviced before reading back results. This is the device sending an interrupt to the host    
     
