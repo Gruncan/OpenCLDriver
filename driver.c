@@ -212,42 +212,39 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
 
     // Create the buffer objects to link the input and output arrays in device memory to the buffers in host memory
 
+    unsigned int buffer_bytes = sizeof(output_buffer) * buffer_size;
 
     cl_int errcode_ret = 0;
-    input1 = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_size, input_buffer_1, &errcode_ret);
+    input1 = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_bytes, input_buffer_1, &errcode_ret);
     handleCLCreateBufferReturn(errcode_ret);
 
-    input2 = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_size, input_buffer_2, &errcode_ret);
+    input2 = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_bytes, input_buffer_2, &errcode_ret);
     handleCLCreateBufferReturn(errcode_ret);
 
-    output = clCreateBuffer(ocl->context, CL_MEM_WRITE_ONLY, buffer_size, NULL, &errcode_ret);
+    output = clCreateBuffer(ocl->context, CL_MEM_WRITE_ONLY, buffer_bytes, NULL, &errcode_ret);
     handleCLCreateBufferReturn(errcode_ret);
-
-
 
     status_buf = clCreateBuffer(ocl->context, CL_MEM_WRITE_ONLY, sizeof(int), NULL, &errcode_ret);
     handleCLCreateBufferReturn(errcode_ret);
 
 
 
-//    printf("%d\n", sizeof(buffer_size));
 
     // Write the data in input arrays into the device memory
     cl_int result;
-    result = clEnqueueWriteBuffer(ocl->command_queue, input1, CL_TRUE, 0, buffer_size, input_buffer_1, 0, NULL, NULL);
+    result = clEnqueueWriteBuffer(ocl->command_queue, input1, CL_TRUE, 0, buffer_bytes, input_buffer_1, 0, NULL, NULL);
     handleCLEnqueueBufferWriteReturn(result);
 
-    result = clEnqueueWriteBuffer(ocl->command_queue, input2, CL_TRUE, 0, buffer_size, input_buffer_2, 0, NULL, NULL);
+    result = clEnqueueWriteBuffer(ocl->command_queue, input2, CL_TRUE, 0, buffer_bytes, input_buffer_2, 0, NULL, NULL);
     handleCLEnqueueBufferWriteReturn(result);
 
-    result = clEnqueueWriteBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_size, output_buffer, 0, NULL, NULL);
+    result = clEnqueueWriteBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_bytes, output_buffer, 0, NULL, NULL);
     handleCLEnqueueBufferWriteReturn(result);
 
-    result = clEnqueueWriteBuffer(ocl->command_queue, status_buf, CL_TRUE, 0, sizeof(status), status, 0, NULL, NULL);
+    result = clEnqueueWriteBuffer(ocl->command_queue, status_buf, CL_TRUE, 0, 1, status, 0, NULL, NULL);
     handleCLEnqueueBufferWriteReturn(result);
 
 
-//    printf("%d\n", buffer_size);
     // Set the arguments to our compute kernel
     result = clSetKernelArg(ocl->kernel, 0, sizeof(input1), &input1);
     handleCLSetKernelArg(result, 0);
@@ -267,20 +264,20 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
     result = clSetKernelArg(ocl->kernel, 5, sizeof(w2), &w2);
     handleCLSetKernelArg(result, 5);
 
-    result = clSetKernelArg(ocl->kernel, 6, sizeof(buffer_size), &buffer_size);
+
+    result = clSetKernelArg(ocl->kernel, 6, sizeof(buffer_bytes), &buffer_bytes);
     handleCLSetKernelArg(result, 6);
 
 
 
     // Execute the kernel, i.e. tell the device to process the data using the given global and local ranges
-//    global = 16;
-    printf("l%zu\n", local);
-    printf("g%zu\n", global);
-    printf("\n%d\n", CL_DEVICE_MAX_WORK_GROUP_SIZE);
-    printf("\n%d\n", CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS);
+    printf("local: %zu\n", local);
+    printf("global: %zu\n", global);
+    printf("\nCL_DEVICE_MAX_WORK_GROUP_SIZE: %d\n", CL_DEVICE_MAX_WORK_GROUP_SIZE);
+    printf("\nCL_DEVICE_MAX_WORK_ITEM_DIMENSIONS: %d\n\n", CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS);
 
 //                                  command Queue       Kernel       Work dim   offset   work size g   work size l   Num events, event list, event
-    result = clEnqueueNDRangeKernel(ocl->command_queue, ocl->kernel, 1,         NULL,    &global,    &local,        0,          NULL,    NULL);
+    result = clEnqueueNDRangeKernel(ocl->command_queue, ocl->kernel, 1,         NULL,    &global,       NULL,        0,          NULL,      NULL);
     handleCLNDRangeKernel(result);
 
 
@@ -297,22 +294,17 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
 
 
     // When the status is 0, read back the results from the device to verify the output
-
     if(*status != 0){
         fprintf(stderr, "Error: Status is not 0 instead is %d\n", *status);
         return -1;
     }
 
-//    printf("%d\n", buffer_size);
-    result = clEnqueueReadBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_size, output_buffer, 0, NULL, NULL);
+    result = clEnqueueReadBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_bytes, output_buffer, 0, NULL, NULL);
     handleCLEnqueueBufferReadReturn(result);
 
     for (int i = 0; i < buffer_size; ++i) {
         printf("output[%d]: %d\n",i, output_buffer[i]);
     }
-
-
-
 
 
 
