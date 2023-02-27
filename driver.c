@@ -1,6 +1,7 @@
 #include "driver.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #ifndef OSX
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS
@@ -12,10 +13,17 @@
 void handleCLEnqueueBufferWriteReturn(cl_int err);
 void handleCLCreateBufferReturn(cl_int err);
 void handleCLSetKernelArg(cl_int err, int index);
-void handleCLNDRangeKernel(cl_int err);
+void handleCLNDRangeKernel(cl_int err, unsigned long tid);
 void handleCLFinish(cl_int err);
 void handleCLEnqueueBufferReadReturn(cl_int err);
 
+struct driver_mutexes{
+    pthread_mutex_t kernel;
+    pthread_mutex_t command_queue;
+    pthread_mutex_t context;
+};
+
+struct driver_mutexes mutexes;
 
 ////////////////////////////////////////////////////////////////////////////////
 CLObject* init_driver() {
@@ -139,7 +147,11 @@ CLObject* init_driver() {
     ocl->device_id = device_id;
 
 //===============================================================================================================================================================  
-// START of assignment code section 
+// START of assignment code section
+
+    pthread_mutex_init(&mutexes.kernel, NULL);
+    pthread_mutex_init(&mutexes.command_queue, NULL);
+    pthread_mutex_init(&mutexes.context, NULL);
 
 // END of assignment code section 
 //===============================================================================================================================================================  
@@ -170,6 +182,9 @@ int shutdown_driver(CLObject* ocl) {
      }
 //===============================================================================================================================================================  
 // START of assignment code section      
+    pthread_mutex_destroy(&mutexes.command_queue);
+    pthread_mutex_destroy(&mutexes.kernel);
+    pthread_mutex_destroy(&mutexes.context);
 
 // END of assignment code section
 //===============================================================================================================================================================  
@@ -214,6 +229,7 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
 
     unsigned int buffer_bytes = sizeof(output_buffer) * buffer_size;
 
+    pthread_mutex_lock(&mutexes.context);
     cl_int errcode_ret = 0;
     input1 = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_bytes, input_buffer_1, &errcode_ret);
     handleCLCreateBufferReturn(errcode_ret);
@@ -227,7 +243,9 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
     status_buf = clCreateBuffer(ocl->context, CL_MEM_WRITE_ONLY, sizeof(int), NULL, &errcode_ret);
     handleCLCreateBufferReturn(errcode_ret);
 
+    pthread_mutex_unlock(&mutexes.context);
 
+    pthread_mutex_lock(&mutexes.command_queue);
 
 
     // Write the data in input arrays into the device memory
@@ -244,6 +262,9 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
     result = clEnqueueWriteBuffer(ocl->command_queue, status_buf, CL_TRUE, 0, 1, status, 0, NULL, NULL);
     handleCLEnqueueBufferWriteReturn(result);
 
+    pthread_mutex_unlock(&mutexes.command_queue);
+
+    pthread_mutex_lock(&mutexes.kernel);
 
     // Set the arguments to our compute kernel
     result = clSetKernelArg(ocl->kernel, 0, sizeof(input1), &input1);
@@ -269,16 +290,13 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
     handleCLSetKernelArg(result, 6);
 
 
+    pthread_mutex_lock(&mutexes.command_queue);
 
     // Execute the kernel, i.e. tell the device to process the data using the given global and local ranges
-    printf("local: %zu\n", local);
-    printf("global: %zu\n", global);
-    printf("\nCL_DEVICE_MAX_WORK_GROUP_SIZE: %d\n", CL_DEVICE_MAX_WORK_GROUP_SIZE);
-    printf("\nCL_DEVICE_MAX_WORK_ITEM_DIMENSIONS: %d\n\n", CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS);
 
 //                                  command Queue       Kernel       Work dim   offset   work size g   work size l   Num events, event list, event
     result = clEnqueueNDRangeKernel(ocl->command_queue, ocl->kernel, 1,         NULL,    &global,       NULL,        0,          NULL,      NULL);
-    handleCLNDRangeKernel(result);
+    handleCLNDRangeKernel(result, tid);
 
 
 
@@ -302,17 +320,15 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
     result = clEnqueueReadBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_bytes, output_buffer, 0, NULL, NULL);
     handleCLEnqueueBufferReadReturn(result);
 
-    for (int i = 0; i < buffer_size; ++i) {
-        printf("output[%d]: %d\n",i, output_buffer[i]);
-    }
+    pthread_mutex_unlock(&mutexes.command_queue);
+    pthread_mutex_unlock(&mutexes.kernel);
 
-
-
+//    for (int i = 0; i < buffer_size; ++i) {
+//        printf("output[%d]: %d\n",i, output_buffer[i]);
+//    }
 
     // Shutdown and cleanup
-    
 
-  
 // END of assignment code section 
 //===============================================================================================================================================================  
     return *status;
@@ -334,9 +350,9 @@ void handleCLFinish(cl_int err){
     }
 }
 
-void handleCLNDRangeKernel(cl_int err){
+void handleCLNDRangeKernel(cl_int err, unsigned long tid){
     if (err != CL_SUCCESS){
-        fprintf(stderr,"Error: Failed to execute kernel %d\n", err);
+        fprintf(stderr,"Error: Failed to execute kernel(%lu) %d\n", tid, err);
         exit(EXIT_FAILURE);
     }
 }
