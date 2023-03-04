@@ -16,6 +16,7 @@ void handleCLSetKernelArg(cl_int err, int index);
 void handleCLNDRangeKernel(cl_int err, unsigned long tid);
 void handleCLFinish(cl_int err);
 void handleCLEnqueueBufferReadReturn(cl_int err);
+void handleCLReleaseMemObject(cl_int err);
 
 struct driver_mutexes{
     pthread_mutex_t kernel;
@@ -186,6 +187,7 @@ int shutdown_driver(CLObject* ocl) {
     pthread_mutex_destroy(&mutexes.kernel);
     pthread_mutex_destroy(&mutexes.context);
 
+
 // END of assignment code section
 //===============================================================================================================================================================  
      
@@ -311,8 +313,12 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
 
     // When the status is 0, read back the results from the device to verify the output
     if(*status != 0){
+        // TODO
+        //  rerun the code now in case status is not <0
         fprintf(stderr, "Error: Status is not 0 instead is %d\n", *status);
-        return -1;
+        pthread_mutex_unlock(&mutexes.command_queue);
+        pthread_mutex_unlock(&mutexes.kernel);
+        return *status;
     }
 
     err = clEnqueueReadBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_bytes, output_buffer, 0, NULL, NULL);
@@ -321,16 +327,28 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
     pthread_mutex_unlock(&mutexes.command_queue);
     pthread_mutex_unlock(&mutexes.kernel);
 
-//    for (int i = 0; i < buffer_size; ++i) {
-//        printf("output[%d]: %d\n",i, output_buffer[i]);
-//    }
 
     // Shutdown and cleanup
+    err = clReleaseMemObject(input1);
+    handleCLReleaseMemObject(err);
+    err = clReleaseMemObject(input2);
+    handleCLReleaseMemObject(err);
+    err = clReleaseMemObject(output);
+    handleCLReleaseMemObject(err);
+    err = clReleaseMemObject(status_buf);
+    handleCLReleaseMemObject(err);
 
 // END of assignment code section 
 //===============================================================================================================================================================  
     return *status;
 
+}
+
+void handleCLReleaseMemObject(cl_int err){
+    if(err != CL_SUCCESS){
+        fprintf(stderr, "Error: Failed to release mem objects! %d\n", err);
+        exit(EXIT_FAILURE);
+    }
 }
 
 void handleCLEnqueueBufferReadReturn(cl_int err){
@@ -339,7 +357,6 @@ void handleCLEnqueueBufferReadReturn(cl_int err){
         exit(EXIT_FAILURE);
     }
 }
-
 
 void handleCLFinish(cl_int err){
     if (err != CL_SUCCESS){
@@ -355,14 +372,12 @@ void handleCLNDRangeKernel(cl_int err, unsigned long tid){
     }
 }
 
-
 void handleCLSetKernelArg(cl_int err, int index){
     if (err != CL_SUCCESS) {
         fprintf(stderr,"Error: Failed to set kernel arg %d! %d\n", index, err);
         exit(EXIT_FAILURE);
     }
 }
-
 
 void handleCLCreateBufferReturn(cl_int err){
     if (err != CL_SUCCESS) {
