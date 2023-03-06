@@ -193,7 +193,7 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
      int err;                            // error code returned from api calls
      int status[1]={-1};               // number of correct results returned
      unsigned int max_iters;
-     max_iters = 100;
+     max_iters = MAX_ITERS;
 
      size_t global;                      // global domain size for our calculation
      size_t local;                       // local domain size for our calculation
@@ -217,24 +217,22 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
 
     // Create the buffer objects to link the input and output arrays in device memory to the buffers in host memory
 
-    unsigned int buffer_bytes = sizeof(output_buffer) * buffer_size;
+    unsigned int buffer_bytes = 4 * buffer_size;
+
+    pthread_mutex_lock(&ocl->device_lock);
+    input1 = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_bytes, input_buffer_1, &err);
+    handleCLCreateBufferReturn(err);
+
+    input2 = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_bytes, input_buffer_2, &err);
+    handleCLCreateBufferReturn(err);
+
+    output = clCreateBuffer(ocl->context, CL_MEM_WRITE_ONLY, buffer_bytes, NULL, &err);
+    handleCLCreateBufferReturn(err);
+
+    status_buf = clCreateBuffer(ocl->context, CL_MEM_WRITE_ONLY, sizeof(int), NULL, &err);
+    handleCLCreateBufferReturn(err);
 
     do{
-        pthread_mutex_lock(&ocl->device_lock);
-        input1 = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_bytes, input_buffer_1, &err);
-        handleCLCreateBufferReturn(err);
-
-        input2 = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_bytes, input_buffer_2, &err);
-        handleCLCreateBufferReturn(err);
-
-        output = clCreateBuffer(ocl->context, CL_MEM_WRITE_ONLY, buffer_bytes, NULL, &err);
-        handleCLCreateBufferReturn(err);
-
-        status_buf = clCreateBuffer(ocl->context, CL_MEM_WRITE_ONLY, sizeof(int), NULL, &err);
-        handleCLCreateBufferReturn(err);
-
-
-
         // Write the data in input arrays into the device memory
         err = clEnqueueWriteBuffer(ocl->command_queue, input1, CL_TRUE, 0, buffer_bytes, input_buffer_1, 0, NULL, NULL);
         handleCLEnqueueBufferWriteReturn(err);
@@ -269,16 +267,15 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
         err = clSetKernelArg(ocl->kernel, 5, sizeof(w2), &w2);
         handleCLSetKernelArg(err, 5);
 
-
         err = clSetKernelArg(ocl->kernel, 6, sizeof(buffer_bytes), &buffer_bytes);
         handleCLSetKernelArg(err, 6);
 
 
 
         // Execute the kernel, i.e. tell the device to process the data using the given global and local ranges
-
+        size_t local_size = 1200;
 //                                  command Queue       Kernel       Work dim   offset   work size g   work size l   Num events, event list, event
-        err = clEnqueueNDRangeKernel(ocl->command_queue, ocl->kernel, 1,         NULL,    &global,       NULL,        0,          NULL,      NULL);
+        err = clEnqueueNDRangeKernel(ocl->command_queue, ocl->kernel, 1,         NULL,    &global,       &local_size,        0,          NULL,      NULL);
         handleCLNDRangeKernel(err, tid);
 
 
@@ -292,30 +289,32 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
         err = clEnqueueReadBuffer(ocl->command_queue, status_buf, CL_TRUE, 0, sizeof(status), status, 0, NULL, NULL);
         handleCLEnqueueBufferReadReturn(err);
 
-
-
-        // When the status is 0, read back the results from the device to verify the output
         if(*status == 0){
-            err = clEnqueueReadBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_bytes, output_buffer, 0, NULL, NULL);
-            handleCLEnqueueBufferReadReturn(err);
-            max_iters = 0;
+            break;
         }
-
-
-        pthread_mutex_unlock(&ocl->device_lock);
-
-        // Shutdown and cleanup
-        err = clReleaseMemObject(input1);
-        handleCLReleaseMemObject(err);
-        err = clReleaseMemObject(input2);
-        handleCLReleaseMemObject(err);
-        err = clReleaseMemObject(output);
-        handleCLReleaseMemObject(err);
-        err = clReleaseMemObject(status_buf);
-        handleCLReleaseMemObject(err);
 
         max_iters--;
     } while (max_iters > 0);
+
+
+    // If max_iters is 0 and status is still not
+    if(*status != 0)
+        return *status;
+
+    // When the status is 0, read back the results from the device to verify the output
+    err = clEnqueueReadBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_bytes, output_buffer, 0, NULL, NULL);
+    handleCLEnqueueBufferReadReturn(err);
+    pthread_mutex_unlock(&ocl->device_lock);
+
+    // Shutdown and cleanup
+    err = clReleaseMemObject(input1);
+    handleCLReleaseMemObject(err);
+    err = clReleaseMemObject(input2);
+    handleCLReleaseMemObject(err);
+    err = clReleaseMemObject(output);
+    handleCLReleaseMemObject(err);
+    err = clReleaseMemObject(status_buf);
+    handleCLReleaseMemObject(err);
 
 // END of assignment code section 
 //===============================================================================================================================================================  
