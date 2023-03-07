@@ -219,7 +219,7 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
 
     unsigned int buffer_bytes = 4 * buffer_size;
 
-    pthread_mutex_lock(&ocl->device_lock);
+
     input1 = clCreateBuffer(ocl->context, CL_MEM_USE_HOST_PTR, buffer_bytes, input_buffer_1, &err);
     handleCLCreateBufferReturn(err);
 
@@ -232,23 +232,25 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
     status_buf = clCreateBuffer(ocl->context, CL_MEM_WRITE_ONLY, sizeof(int), NULL, &err);
     handleCLCreateBufferReturn(err);
 
+    // Write the data in input arrays into the device memory
+    pthread_mutex_lock(&ocl->device_lock);
+    err = clEnqueueWriteBuffer(ocl->command_queue, input1, CL_TRUE, 0, buffer_bytes, input_buffer_1, 0, NULL, NULL);
+    handleCLEnqueueBufferWriteReturn(err);
+
+    err = clEnqueueWriteBuffer(ocl->command_queue, input2, CL_TRUE, 0, buffer_bytes, input_buffer_2, 0, NULL, NULL);
+    handleCLEnqueueBufferWriteReturn(err);
+
+    err = clEnqueueWriteBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_bytes, output_buffer, 0, NULL, NULL);
+    handleCLEnqueueBufferWriteReturn(err);
+
+    err = clEnqueueWriteBuffer(ocl->command_queue, status_buf, CL_TRUE, 0, 1, status, 0, NULL, NULL);
+    handleCLEnqueueBufferWriteReturn(err);
+
+    pthread_mutex_unlock(&ocl->device_lock);
+
+
+    // Set the arguments to our compute kernel
     do{
-        // Write the data in input arrays into the device memory
-        err = clEnqueueWriteBuffer(ocl->command_queue, input1, CL_TRUE, 0, buffer_bytes, input_buffer_1, 0, NULL, NULL);
-        handleCLEnqueueBufferWriteReturn(err);
-
-        err = clEnqueueWriteBuffer(ocl->command_queue, input2, CL_TRUE, 0, buffer_bytes, input_buffer_2, 0, NULL, NULL);
-        handleCLEnqueueBufferWriteReturn(err);
-
-        err = clEnqueueWriteBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_bytes, output_buffer, 0, NULL, NULL);
-        handleCLEnqueueBufferWriteReturn(err);
-
-        err = clEnqueueWriteBuffer(ocl->command_queue, status_buf, CL_TRUE, 0, 1, status, 0, NULL, NULL);
-        handleCLEnqueueBufferWriteReturn(err);
-
-
-
-        // Set the arguments to our compute kernel
         err = clSetKernelArg(ocl->kernel, 0, sizeof(input1), &input1);
         handleCLSetKernelArg(err, 0);
 
@@ -271,41 +273,47 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
         handleCLSetKernelArg(err, 6);
 
 
-
         // Execute the kernel, i.e. tell the device to process the data using the given global and local ranges
-        size_t local_size = 1200;
+        size_t local_size = 64;
+        pthread_mutex_lock(&ocl->device_lock);
 //                                  command Queue       Kernel       Work dim   offset   work size g   work size l   Num events, event list, event
         err = clEnqueueNDRangeKernel(ocl->command_queue, ocl->kernel, 1,         NULL,    &global,       &local_size,        0,          NULL,      NULL);
         handleCLNDRangeKernel(err, tid);
 
-
+        pthread_mutex_unlock(&ocl->device_lock);
 
         // Wait for the command commands to get serviced before reading back results. This is the device sending an interrupt to the host
         err = clFinish(ocl->command_queue);
         handleCLFinish(err);
 
 
+        pthread_mutex_lock(&ocl->device_lock);
         // Check the status
         err = clEnqueueReadBuffer(ocl->command_queue, status_buf, CL_TRUE, 0, sizeof(status), status, 0, NULL, NULL);
         handleCLEnqueueBufferReadReturn(err);
+
+        pthread_mutex_unlock(&ocl->device_lock);
 
         if(*status == 0){
             break;
         }
 
         max_iters--;
+        printf("Max iters %llu decremented %d!\n", tid, max_iters);
     } while (max_iters > 0);
 
 
-    // If max_iters is 0 and status is still not
-    if(*status != 0)
-        return *status;
+    // If status is 0 read back and else clean up and return
+    if(*status == 0){
+        pthread_mutex_lock(&ocl->device_lock);
 
-    // When the status is 0, read back the results from the device to verify the output
-    err = clEnqueueReadBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_bytes, output_buffer, 0, NULL, NULL);
-    handleCLEnqueueBufferReadReturn(err);
-    pthread_mutex_unlock(&ocl->device_lock);
+        // When the status is 0, read back the results from the device to verify the output
+        err = clEnqueueReadBuffer(ocl->command_queue, output, CL_TRUE, 0, buffer_bytes, output_buffer, 0, NULL, NULL);
+        handleCLEnqueueBufferReadReturn(err);
 
+        pthread_mutex_unlock(&ocl->device_lock);
+
+    }
     // Shutdown and cleanup
     err = clReleaseMemObject(input1);
     handleCLReleaseMemObject(err);

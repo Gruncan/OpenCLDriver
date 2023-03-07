@@ -1,0 +1,129 @@
+==58518==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 1664 byte(s) in 16 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f3f074396 in clGetKernelWorkGroupInfo (/home/duncan/AMDAPPSDK-3.0/lib/x86_64/libamdocl64.so+0x674396)
+
+Direct leak of 336 byte(s) in 7 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f411717ec  (/home/duncan/AMDAPPSDK-3.0/lib/x86_64/libamdocl64.so+0x27717ec)
+
+Direct leak of 8 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f44002728  (/home/duncan/AMDAPPSDK-3.0/lib/x86_64/libOpenCL.so.1+0x2728)
+
+Indirect leak of 21168 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44413e47 in __interceptor_calloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:90
+    #1 0x7f1f449f0204  (/usr/lib/x86_64-linux-gnu/liblsan.so.0.0.0+0x2dd204)
+
+Indirect leak of 18816 byte(s) in 2 object(s) allocated from:
+    #0 0x7f1f44413e47 in __interceptor_calloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:90
+    #1 0x7f1f3e8f01a0  (<unknown module>)
+
+Indirect leak of 16384 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44413e47 in __interceptor_calloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:90
+    #1 0x7f1f3e8efdce  (<unknown module>)
+
+Indirect leak of 8276 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44412293 in __interceptor_realloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:98
+    #1 0x7f1f449f04fb  (/usr/lib/x86_64-linux-gnu/liblsan.so.0.0.0+0x2dd4fb)
+
+Indirect leak of 4704 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44413e47 in __interceptor_calloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:90
+    #1 0x7f1f3e8efa41  (<unknown module>)
+
+Indirect leak of 1664 byte(s) in 16 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f3f0998cd  (/home/duncan/AMDAPPSDK-3.0/lib/x86_64/libamdocl64.so+0x6998cd)
+
+Indirect leak of 1152 byte(s) in 16 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f3f0998b4  (/home/duncan/AMDAPPSDK-3.0/lib/x86_64/libamdocl64.so+0x6998b4)
+
+Indirect leak of 1152 byte(s) in 16 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f3f099882  (/home/duncan/AMDAPPSDK-3.0/lib/x86_64/libamdocl64.so+0x699882)
+
+Indirect leak of 1152 byte(s) in 16 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f3f09989b  (/home/duncan/AMDAPPSDK-3.0/lib/x86_64/libamdocl64.so+0x69989b)
+
+Indirect leak of 168 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44413e47 in __interceptor_calloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:90
+    #1 0x7f1f3e8effc2  (<unknown module>)
+
+Indirect leak of 160 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f3e8de9af  (<unknown module>)
+
+Indirect leak of 152 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44413e47 in __interceptor_calloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:90
+    #1 0x7f1f3e9561ce  (<unknown module>)
+
+Indirect leak of 145 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f3e8f0620  (<unknown module>)
+
+Indirect leak of 128 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44413e47 in __interceptor_calloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:90
+    #1 0x7f1f3e8ec8ae  (<unknown module>)
+
+Indirect leak of 128 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44413e47 in __interceptor_calloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:90
+    #1 0x7f1f3e8f003e  (<unknown module>)
+
+Indirect leak of 112 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44413e47 in __interceptor_calloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:90
+    #1 0x7f1f3e8f0110  (<unknown module>)
+
+Indirect leak of 112 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44413e47 in __interceptor_calloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:90
+    #1 0x7f1f3e8ffc72  (<unknown module>)
+    #2 0x4d495f545100313c  (<unknown module>)
+
+Indirect leak of 72 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44413e47 in __interceptor_calloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:90
+    #1 0x7f1f3e8efe30  (<unknown module>)
+
+Indirect leak of 48 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f3e8ffd87  (<unknown module>)
+
+Indirect leak of 48 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f3e8ffd71  (<unknown module>)
+
+Indirect leak of 40 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f3e9000f1  (<unknown module>)
+
+Indirect leak of 32 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44412293 in __interceptor_realloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:98
+    #1 0x7f1f449f415e  (<unknown module>)
+
+Indirect leak of 32 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f449ed1b7  (/usr/lib/x86_64-linux-gnu/liblsan.so.0.0.0+0x2da1b7)
+
+Indirect leak of 24 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f3e8fd965  (<unknown module>)
+
+Indirect leak of 21 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f3e8eff4e  (<unknown module>)
+
+Indirect leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f449f02ee  (/usr/lib/x86_64-linux-gnu/liblsan.so.0.0.0+0x2dd2ee)
+
+Indirect leak of 10 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f43ca860e in __GI___strdup string/strdup.c:42
+
+Indirect leak of 3 byte(s) in 1 object(s) allocated from:
+    #0 0x7f1f44414302 in __interceptor_malloc ../../../../src/libsanitizer/lsan/lsan_interceptors.cpp:75
+    #1 0x7f1f43ca860e in __GI___strdup string/strdup.c:42
+    #2 0x4d495f545100313c  (<unknown module>)
+
+SUMMARY: LeakSanitizer: 77927 byte(s) leaked in 113 allocation(s).
