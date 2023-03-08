@@ -1,7 +1,6 @@
 #include "driver.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 
 #ifndef OSX
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS
