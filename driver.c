@@ -289,10 +289,10 @@ int run_driver(CLObject* ocl, unsigned int buffer_size,  int* input_buffer_1, in
         pthread_mutex_lock(&ocl->device_lock);
 
         // Let opencl choose local size, if that fails try local being same as global otherwise handle failure
+        local = global;
         err = clEnqueueNDRangeKernel(ocl->command_queue, ocl->kernel, 1, NULL, &global, NULL, 0, NULL, NULL);
         if(err == CL_INVALID_WORK_GROUP_SIZE){
-            err = clEnqueueNDRangeKernel(ocl->command_queue, ocl->kernel, 1, NULL, &global, &global, 0, NULL, NULL);
-            handleCLError(err, EXECUTE_MESSAGE, tid);
+            err = clEnqueueNDRangeKernel(ocl->command_queue, ocl->kernel, 1, NULL, &global, &local, 0, NULL, NULL);
         }
         handleCLError(err, EXECUTE_MESSAGE, tid);
 
